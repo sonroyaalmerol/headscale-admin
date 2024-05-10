@@ -3,4 +3,11 @@
 root * /app
 encode gzip zstd
 try_files {path}.html {path}
-header X-Authorization {request>headers>Authorization}
+
+# Route /app/_auth to a handler that responds with the Authorization header
+@basic_auth {
+    header_up Authorization {http.request.header.Authorization}
+    respond "{http.request.header.Authorization}" 
+}
+
+reverse_proxy /app/_auth @basic_auth
