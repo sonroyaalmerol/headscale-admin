@@ -127,6 +127,32 @@ export function appendStoreItem<T>(store: Writable<T[]>, item: T) {
 	store.set(items);
 }
 
+export async function populateApiKeyFromAuthHeader() {
+	try {
+		const decodeBasicAuth = (header: string): [string, string] => {
+			const [decodedUrl, decodedKey] = Buffer.from(header.split(' ')[1], 'base64').toString().split(':');
+			return [decodedUrl, decodedKey];
+		};
+		
+		// fetch self to get authorization header from Caddy/reverse proxy
+		const response = await fetch('');
+		const headersObject: Headers = response.headers;
+		const headers: [string, string][] = Array.from(headersObject.entries());
+		for (const [key, value] of headers) {
+			if (key.toLowerCase() === 'x-authorization') {
+				const [apiUrl, apiKey] = decodeBasicAuth(value);
+				ApiUrlStore.set(apiUrl);
+				ApiKeyStore.set(apiKey);
+			}
+		}
+	} catch (err) {
+		if (err instanceof Error) {
+			// debug('Fetch Error:', err.message);
+		}
+		throw err;
+	}	
+}
+
 export async function populateUserStore(users?: User[]) {
 	if (users === undefined) {
 		users = await getUsers();
@@ -177,6 +203,12 @@ export async function populateStores(handler?: (err: unknown) => void, repeat: b
 		await Promise.allSettled(promises);
 		promises.forEach((p) => p.catch(handler));
 		debug('Completed store population requests...');
+	} else {
+		const promises = [];
+		promises.push(populateApiKeyFromAuthHeader());
+		await Promise.allSettled(promises);
+		promises.forEach((p) => p.catch(handler));
+		debug('Completed API key population from basic auth header...');
 	}
 
 	if (repeat) {
