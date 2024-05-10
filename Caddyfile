@@ -2,4 +2,5 @@
 root * /app
 encode gzip zstd
 try_files {path}.html {path}
+file_server
 header X-Authorization {http.request.header.Authorization}
