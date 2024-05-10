@@ -3,7 +3,4 @@
 root * /app
 encode gzip zstd
 try_files {path}.html {path}
-
-header / {
-    Access-Control-Expose-Headers Authorization
-}
+header X-Authorization {>Authorization}
